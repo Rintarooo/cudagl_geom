@@ -1,29 +1,28 @@
 # https://hub.docker.com/r/nvidia/cudagl/tags?page=1&ordering=last_updated&name=10.1
 FROM nvidia/cudagl:10.1-devel-ubuntu18.04
 
+# set environment variable
 ENV DEBIAN_FRONTEND noninteractive
+ENV CUDA_DEBUGGER_SOFTWARE_PREEMPTION 1
+ENV NVIDIA_DRIVER_CAPABILITIES compute,utility,graphics
 
 ## check opencv version with cuda version
 ## https://qiita.com/tomoaki_teshima/items/294c9ffb03a3dcc4cfef
 # ARG OPENCV_VERSION='4.4.0'
-# ARG OPENCV_VERSION='4.1.0'
 ARG OPENCV_VERSION='3.4.11'
-# ARG OPENCV_VERSION='3.4.10'
 
 ## check Compute Capability(CC) with the url of the official cuda website below
 ## https://developer.nvidia.com/cuda-gpus
 ## if you don't know your GPU name, check by $ nvidia-settings or $ nvidia-smi
 ## GPU_ARCH should be the value lower than your GPU CC, otherwise it won't work when you use cuda enabled opencv.
 ## https://qiita.com/sonots/items/1c60ccb6ffec6d04b223
+ARG GPU_ARCH='5.2'
 
-# ARG GPU_ARCH='6.1'
-# ARG GPU_ARCH='5.2'
-ARG GPU_ARCH='5.0'
-
+ARG PCL_VERSION="1.11.0"
 
 WORKDIR /opt
 
-# Build tools
+# Build tools + debugger
 RUN apt update && \
     apt install -y \
     sudo \
@@ -51,6 +50,7 @@ RUN sudo apt install -y \
     libgdal-dev \
     libgtk2.0-dev
 
+# for OpenGL
 # https://grainrigi.hatenablog.com/entry/2017/08/27/144218
 RUN sudo apt install -y \
     libglew-dev \
@@ -76,18 +76,19 @@ RUN sudo apt install -y \
     libopencv-highgui-dev \
     ffmpeg
 
-# Parallelism and linear algebra libraries:
+# ======== Installing Parallelism and linear algebra library(Eigen) ========
 RUN sudo apt install -y \
     libtbb-dev \
     libeigen3-dev
 
-# Python:
+# ======== Installing Python3 ========
 RUN sudo apt install -y \
     python3-dev \
     python3-tk \
     python3-numpy
 
-# Build OpenCV
+
+# ======== Installing CUDA enabled OpenCV ========
 RUN wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip && \
     unzip ${OPENCV_VERSION}.zip && rm ${OPENCV_VERSION}.zip && \
     mv opencv-${OPENCV_VERSION} OpenCV && \
@@ -115,10 +116,6 @@ RUN wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip && \
     make all -j$(nproc) && \
     make install
 
-
-
-
-
 # ======== Installing VTK ========
 RUN apt-get update && apt-get install -y \
     libxt-dev 
@@ -132,10 +129,7 @@ RUN wget https://www.vtk.org/files/release/8.2/VTK-8.2.0.tar.gz \
     && make install
 
 
-# ======== Installing PCL library ========
-# WORKDIR /tmp
-ENV PCL_VERSION="1.11.0"
-
+# ======== Installing PCL ========
 # PCL dependencies
 RUN apt-get install -y \
     libeigen3-dev \
